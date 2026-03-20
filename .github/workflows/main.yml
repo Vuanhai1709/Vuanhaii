@@ -1,110 +1,39 @@
-name: WINDOWS TOKEN RDP
+name: WINDOWS 2019 RDP
 
 on:
-  workflow_dispatch:
-    inputs:
-      increment:
-        type: string
-        description: 'ngrok token'
-        required: false
-        default: ''
-
+  workflow_dispatch
+  
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2019
     timeout-minutes: 9999
-
     steps:
-      - name: 🔽 Download Files
+      - name: Download Ngrok.
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
           Invoke-WebRequest https://raw.githubusercontent.com/Riders004/rdp/master/start.bat -OutFile start.bat
-          Invoke-WebRequest https://raw.githubusercontent.com/Riders004/rdp/master/wallpaper.bat -OutFile wallpaper.bat
+          Invoke-WebRequest https://raw.githubusercontent.com/Riders004/rdp/master/download1.jpeg -OutFile wallpaper.bat
           Invoke-WebRequest https://raw.githubusercontent.com/Vip3rLi0n/Ngrok-RDPs/main/resources/loop.ps1 -OutFile loop.ps1
-
-      - name: 📦 Extract Ngrok
+          
+      - name: Extract ngrok
         run: Expand-Archive ngrok.zip
-
-      - name: 🔐 Set Ngrok Authtoken
-        shell: pwsh
+        
+      - name: Connect Ngrok.
         run: |
-          $inputToken = '${{ github.event.inputs.increment }}'
-          $envToken = $Env:NGROK_AUTH
-          $imputTkn = $Env:TKAN
-          $defaultToken = '316WRV55lXVjwT4mXHuMYskqxiu_4bMAdBptaGPiZMBiZz82s'
-          if ($inputToken) {
-          $token = $imputTkn
-          } elseif ($envToken) {
-          $token = $envToken
-          } else {
-          $token = $defaultToken
-          }
-          Write-Host "Using ngrok token: $($token.Substring(0,[Math]::Min(30,$token.Length)))***"
-          .\ngrok\ngrok.exe config add-authtoken $token
+          ./ngrok/ngrok.exe authtoken $Env:NGROK_AUTH
+          echo ${{ secrets.TAKEN }}
+          echo $Env:NGROK_AUTH
         env:
           NGROK_AUTH: ${{ secrets.TAKEN }}
-          TKAN: ${{ vars.TOKUN }}
-
-      - name: 🔧 Enable RDP & Configure Firewall
+      - name: Windows10 RDP.
         run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-          Copy-Item wallpaper.bat D:\a\wallpaper.bat
-
-      - name: 🚀 Start Ngrok Tunnel (Hidden Window)
-        run: Start-Process -WindowStyle Hidden PowerShell -ArgumentList './ngrok/ngrok.exe tcp --region ap 3389'
-
-      - name: 🔎 Verify Ngrok process is running
-        shell: pwsh
-        run: |
-          $proc = Get-Process -Name ngrok -ErrorAction SilentlyContinue
-          if ($proc) {
-            Write-Host "✅ Ngrok process is running (PID: $($proc.Id))"
-          } else {
-            Write-Host "❌ Ngrok process NOT found!"
-            exit 1
-          }
-
-      - name: 🕐 Wait for Ngrok to Initialize
-        shell: pwsh
-        run: Start-Sleep -Seconds 20
-
-      - name: ⚙️ Run Setup Script (start.bat) with NGROK URL + credentials
-        shell: pwsh
-        run: |
-          $retries = 10
-          $url = $null
-          while ($retries -gt 0 -and -not $url) {
-            try {
-              $tunnels = Invoke-RestMethod -Uri 'http://localhost:4040/api/tunnels' -ErrorAction Stop
-              if ($tunnels.tunnels.Count -gt 0) {
-                $url = $tunnels.tunnels[0].public_url
-              }
-            } catch {}
-            if (-not $url) { Start-Sleep -Seconds 3 }
-            $retries--
-          }
-
-          if (-not $url) {
-            Write-Host "❌ Could not fetch Ngrok URL. Check ngrok process and authtoken."
-            exit 1
-          }
-
-          Write-Host "✅ Ngrok Public URL: $url"
-
-          $escapedUrl = $url.Replace('"', '\"')
-          $escapedUser = 'administrator'.Replace('"','\"')
-          $escapedPass = 'OLDUSER#06'.Replace('"','\"')
-
-          $cmd = "start.bat `"$escapedUrl`" `"$escapedUser`" `"$escapedPass`""
-          #Write-Host "Running: $cmd"
-          cmd.exe /c $cmd
-
-      - name: 🌐 Debug Ngrok API response raw
-        shell: pwsh
-        run: curl.exe -s http://localhost:4040/api/tunnels | Write-Host
-
-      - name: 🔁 Keep Runner Alive
-        shell: pwsh
-        run: pwsh -ExecutionPolicy Bypass -File .\loop.ps1
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+          copy wallpaper.bat D:\a\wallpaper.bat
+      - name: Tunnel.
+        run: Start-Process Powershell -ArgumentList '-Noexit -Command "./ngrok/ngrok.exe tcp --region ap 3389"'
+      - name: Connect Rdp.
+        run: cmd /c start.bat
+      - name: win10 RDP.
+        run: ./loop.ps1
